@@ -1,21 +1,22 @@
 <?php
 
 /*
- *
- *  ____            _        _   __  __ _                  __  __ ____
- * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \
- * | |_) / _ \ / __| |/ / _ \ __| |\/| | | '_ \ / _ \_____| |\/| | |_) |
- * |  __/ (_) | (__|   <  __/ |_| |  | | | | | |  __/_____| |  | |  __/
- * |_|   \___/ \___|_|\_\___|\__|_|  |_|_|_| |_|\___|     |_|  |_|_|
+ *               _ _
+ *         /\   | | |
+ *        /  \  | | |_ __ _ _   _
+ *       / /\ \ | | __/ _` | | | |
+ *      / ____ \| | || (_| | |_| |
+ *     /_/    \_|_|\__\__,_|\__, |
+ *                           __/ |
+ *                          |___/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * @author PocketMine Team
- * @link http://www.pocketmine.net/
- *
+ * @author TuranicTeam - FurkanYks
+ * @link https://github.com/TuranicTeam/Altay
  *
  */
 
@@ -23,7 +24,9 @@ declare(strict_types=1);
 
 namespace pocketmine\network\mcpe\handler;
 
+use pocketmine\block\inventory\BeaconInventory;
 use pocketmine\block\inventory\EnchantInventory;
+use pocketmine\block\tile\Beacon;
 use pocketmine\inventory\Inventory;
 use pocketmine\inventory\transaction\action\CreateItemAction;
 use pocketmine\inventory\transaction\action\DestroyItemAction;
@@ -34,8 +37,10 @@ use pocketmine\inventory\transaction\InventoryTransaction;
 use pocketmine\inventory\transaction\TransactionBuilder;
 use pocketmine\inventory\transaction\TransactionBuilderInventory;
 use pocketmine\item\Item;
+use pocketmine\item\VanillaItems;
 use pocketmine\network\mcpe\InventoryManager;
 use pocketmine\network\mcpe\protocol\types\inventory\ContainerUIIds;
+use pocketmine\network\mcpe\protocol\types\inventory\stackrequest\BeaconPaymentStackRequestAction;
 use pocketmine\network\mcpe\protocol\types\inventory\stackrequest\CraftingConsumeInputStackRequestAction;
 use pocketmine\network\mcpe\protocol\types\inventory\stackrequest\CraftingCreateSpecificResultStackRequestAction;
 use pocketmine\network\mcpe\protocol\types\inventory\stackrequest\CraftRecipeAutoStackRequestAction;
@@ -327,6 +332,20 @@ class ItemStackRequestExecutor{
 		}elseif($action instanceof DestroyStackRequestAction){
 			$destroyed = $this->removeItemFromSlot($action->getSource(), $action->getCount());
 			$this->builder->addAction(new DestroyItemAction($destroyed));
+
+
+		}elseif($action instanceof BeaconPaymentStackRequestAction){
+			$window = $this->player->getCurrentWindow();
+			if($window instanceof BeaconInventory){
+				$primary_id = $action->getPrimaryEffectId();
+				$secondary_id = $action->getSecondaryEffectId();
+				if($window->getBlockTileAtPosition() instanceof Beacon){
+					$window->getBlockTileAtPosition()->setPrimaryEffect($primary_id);
+					$window->getBlockTileAtPosition()->setSecondaryEffect($secondary_id);
+					$window->getBlockTileAtPosition()->onBeaconPayment();
+					$window->setFuelItem(VanillaItems::AIR());
+				}
+			}
 
 		}elseif($action instanceof CreativeCreateStackRequestAction){
 			$item = $this->player->getCreativeInventory()->getItem($action->getCreativeItemId());
